@@ -37,7 +37,7 @@ This application provides three main functionalities:
    poetry env activate
    ```
 
-### Running specific parts:
+## Running specific parts:
 
 You can modify the `__main__` block in the script to run only specific parts if needed:
 
