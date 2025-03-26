@@ -37,17 +37,6 @@ This application provides three main functionalities:
    poetry env activate
    ```
 
-
-### Running the complete analysis:
-```
-python main.py
-```
-
-This will execute all three parts of the analysis:
-- Print the top 50 classical chess players
-- Show the rating history for the top player over the last 30 days
-- Generate a CSV file with rating history for all top 50 players
-
 ### Running specific parts:
 
 You can modify the `__main__` block in the script to run only specific parts if needed:
