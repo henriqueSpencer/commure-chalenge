@@ -1,7 +1,25 @@
+"""Chess Rankings Analyzer
+
+This script analyzes chess player rankings and rating history from Lichess.
+
+The project performs three main tasks:
+1. Lists the top 50 classical chess players on Lichess
+2. Shows the rating history of the top player over the last 30 days
+3. Generates a CSV file with the rating history(last 30 days) of all top 50 players
+
+The code uses the Lichess public API (https://lichess.org/api) and processes the data
+to provide a consistent temporal analysis, maintaining player ratings on days
+when they didn't play.
+
+Author: Henrique Spencer Albuquerque
+Email: henriquespencer11@gmail.com
+Repository: https://github.com/henriqueSpencer/commure-chalenge.git
+"""
 import requests
-import json
 import csv
 from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple, Union
+from picklefy import PickleFy
 
 # Part 1: List the top 50 classical chess players
 def get_top_50_classical_players() -> list:
@@ -46,7 +64,7 @@ def print_top_50_classical_players() -> None:
     [print(user["username"]) for user in top_50_players]
 
 # Part 2: Print the rating history for the top chess player in classical chess for the last 30 calendar days.
-def parsing_player_last_30_day_rating(classical_history):
+def parsing_player_last_30_day_rating(classical_history: List[List[int]]) -> Dict[datetime.date, int]:
     """Processes a player's classical chess rating history for the last 30 days.
 
     Takes a player's classical chess rating history data and processes it to create a day-by-day
@@ -93,7 +111,8 @@ def parsing_player_last_30_day_rating(classical_history):
 
     return last_30_days_ratings
 
-def parsing_multiple_player_last_30_day_rating(top_players):
+def parsing_multiple_player_last_30_day_rating(top_players: List[Dict[str, Any]]) -> Dict[
+    str, Dict[datetime.date, int]]:
     """Processes rating histories for multiple players for the last 30 days.
 
     Fetches and processes the classical chess rating histories for multiple players
@@ -134,6 +153,27 @@ def parsing_multiple_player_last_30_day_rating(top_players):
             top_players_last_30_days_ratings[player_name] = player_last_30_days_ratings
     return top_players_last_30_days_ratings
 
+def get_last_30_day_rating_for_top_player() -> Optional[Dict[str, Dict[datetime.date, int]]]:
+    """Retrieves the rating history for the top 50 classical chess players for the last 30 days.
+
+    Fetches the top 50 classical chess players and their rating histories from the Lichess API.
+    Processes the data to create a day-by-day rating history for each player over the last 30 days,
+    maintaining consistent ratings for days when players didn't play.
+
+    Args:
+        None
+
+    Returns:
+        Dict[str, Dict[datetime.date, int]]: Dictionary mapping player usernames to their
+        rating histories (which are dictionaries mapping dates to ratings).
+    """
+    # Get the top player
+    top_players = get_top_50_classical_players()
+    if not top_players:
+        print("No players found.")
+        return
+    top_players_last_30_days_ratings = parsing_multiple_player_last_30_day_rating(top_players)
+    return top_players_last_30_days_ratings
 
 def print_last_30_day_rating_for_top_player() -> None:
     """Prints the rating history of the top classical chess player for the last 30 days.
@@ -144,12 +184,7 @@ def print_last_30_day_rating_for_top_player() -> None:
        Returns:
            None: The function outputs the results to the console but doesn't return a value.
        """
-    # Get the top player
-    top_players = get_top_50_classical_players()
-    if not top_players:
-        print("No players found.")
-        return
-    top_players_last_30_days_ratings = parsing_multiple_player_last_30_day_rating(top_players)
+    top_players_last_30_days_ratings = get_last_30_day_rating_for_top_player()
 
     for player in top_players_last_30_days_ratings:
         print(player, end=', ')
@@ -161,15 +196,63 @@ def print_last_30_day_rating_for_top_player() -> None:
 
 
 # Part 3: Create a CSV that shows the rating history for each of these 50 players, for the last 30 days.
+def generate_rating_csv_for_top_50_classical_players() -> None:
+    """Creates a CSV file with rating history for the top 50 classical chess players.
+
+    Fetches the top 50 classical chess players and their rating histories for the last 30 days.
+    Generates a CSV file where the first column contains player usernames and subsequent columns
+    contain daily ratings. If a player didn't play on a specific day, their last known rating is used.
+
+    Args:
+        None
+
+    Returns:
+        None: The function creates a CSV file named 'top_50_classical_players_ratings.csv'
+        and outputs a confirmation message to the console but doesn't return a value.
+    """
+    top_players_last_30_days_ratings = get_last_30_day_rating_for_top_player()
+    # Just for testing propose where the API request is not necessary, PickleFy is a lib made by me
+    # ok = PickleFy().serialize(file_name='top_players_last_30_days_ratings', variavel=top_players_last_30_days_ratings)
+    # top_players_last_30_days_ratings = PickleFy().serialize(file_name='top_players_last_30_days_ratings')
+
+    # Prepare the data for CSV
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+
+    # Create the header row (username, date1, date2, ..., date30)
+    header = ["username"]
+    for i in range(31):  # 31 columns for 30 days + today
+        date = thirty_days_ago + timedelta(days=i)
+        header.append(date.strftime("%Y-%m-%d"))
+
+
+    # Write to CSV
+    with open('top_50_classical_players_ratings.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(header)
+
+        # Write data for each player in order of the leaderboard
+        for player, ratings in top_players_last_30_days_ratings.items():
+            row = [player]
+            for i in range(30):
+                date = thirty_days_ago + timedelta(days=i)
+                row.append(ratings[date])
+            # Today's rating is yesterday's rating
+            row.append(ratings[date])
+
+            writer.writerow(row)
+
 
 
 
 if __name__ == '__main__':
-    # # Part 1
-    # top_50_players = print_top_50_classical_players()
+    # Part 1
+    print("Top 50 classical chess players:")
+    print_top_50_classical_players()
 
     # Part 2
+    print("Rating history for the top chess player in classical chess for the last 30 calendar days:")
     print_last_30_day_rating_for_top_player()
 
-    # # Part 3
-    # generate_rating_csv_for_top_50_classical_players()
+    # Part 3
+    generate_rating_csv_for_top_50_classical_players()
